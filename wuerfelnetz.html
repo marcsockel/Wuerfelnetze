@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Würfelnetz – Grundschule</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background:#eef0f3; color:#2c3540;
+  font-family:'Segoe UI',system-ui,sans-serif;
+  height:100vh; display:flex; flex-direction:column;
+  overflow:hidden; user-select:none;
+}
+#toolbar {
+  display:flex; align-items:center; flex-wrap:wrap; gap:10px;
+  padding:7px 14px; background:#fff;
+  border-bottom:1px solid #dde1e8;
+  box-shadow:0 1px 6px rgba(0,0,0,.07);
+  z-index:20; min-height:48px; flex-shrink:0;
+}
+.t-group { display:flex; align-items:center; gap:5px; }
+.t-sep   { width:1px; height:20px; background:#dde1e8; flex-shrink:0; }
+.t-label { font-size:11px; color:#7a8898; white-space:nowrap; }
+.vbtn {
+  background:#f2f4f7; color:#4a5a6a;
+  border:1px solid #cdd3db; border-radius:5px;
+  padding:4px 11px; font-size:12px; cursor:pointer;
+  transition:background .12s,color .12s;
+  white-space:nowrap; font-family:inherit;
+}
+.vbtn:hover  { background:#e4e8ed; color:#1e2a38; }
+.vbtn.active { background:#1e6bb8; color:#fff; border-color:#1558a0; }
+.vbtn:disabled { opacity:.5; cursor:not-allowed; }
+select.t-sel {
+  background:#f2f4f7; color:#4a5a6a;
+  border:1px solid #cdd3db; border-radius:5px;
+  padding:4px 8px; font-size:12px; cursor:pointer; font-family:inherit;
+}
+#state-chip {
+  display:flex; align-items:center; gap:6px;
+  background:#f2f4f7; border:1px solid #cdd3db;
+  border-radius:5px; padding:4px 10px;
+  font-size:11px; font-weight:600;
+  letter-spacing:.8px; text-transform:uppercase; color:#4a5a6a;
+}
+#state-dot {
+  width:7px; height:7px; border-radius:50%;
+  background:#1e6bb8; flex-shrink:0; transition:background .4s;
+}
+#state-dot.cube { background:#1a7a40; }
+#prog-wrap { height:3px; background:#e4e8ed; overflow:hidden; flex-shrink:0; }
+#prog-bar  { height:100%; width:0%; background:#1e6bb8; transition:width .05s linear; }
+#wrap { flex:1; position:relative; overflow:hidden; background:#d4e2ee; }
+canvas { display:block; width:100%; height:100%; position:absolute; top:0; left:0; }
+#legend {
+  position:absolute; left:13px; top:50%; transform:translateY(-50%);
+  display:flex; flex-direction:column; gap:4px; pointer-events:none;
+}
+.fc {
+  display:flex; align-items:center; gap:7px;
+  background:rgba(255,255,255,.82); border:1px solid #dde1e8;
+  border-radius:5px; padding:5px 10px;
+  box-shadow:0 1px 3px rgba(0,0,0,.07);
+}
+.fd { width:9px; height:9px; border-radius:2px; flex-shrink:0; }
+.fl { font-size:10.5px; color:#5a6a7a; font-weight:500; }
+#help {
+  position:absolute; bottom:10px; right:12px;
+  font-size:10.5px; line-height:1.65;
+  color:rgba(60,90,130,.55); text-align:right; pointer-events:none; z-index:6;
+}
+#pane-label {
+  position:absolute; top:10px; left:13px;
+  font-size:10.5px; font-weight:600; letter-spacing:1.8px;
+  color:rgba(60,90,135,.55); pointer-events:none; z-index:6;
+}
+
+/* ── Net dropdown with SVG previews ── */
+#net-dd { position:relative; display:inline-block; }
+#net-dd-btn {
+  display:flex; align-items:center; gap:6px;
+  background:#f2f4f7; border:1px solid #cdd3db; border-radius:5px;
+  padding:4px 8px; cursor:pointer;
+}
+#net-dd-btn svg { display:block; }
+#net-dd-btn .arrow { font-size:10px; color:#7a8898; }
+#net-dd-list {
+  display:none; position:absolute; top:calc(100% + 4px); left:0;
+  background:#fff; border:1px solid #cdd3db; border-radius:8px;
+  box-shadow:0 6px 20px rgba(0,0,0,.15);
+  z-index:100; padding:10px;
+}
+#net-dd-list.open { display:grid; grid-template-columns:repeat(4,auto); gap:6px; }
+.nd-item {
+  padding:6px; cursor:pointer; border-radius:6px;
+  transition:background .1s; line-height:0;
+}
+.nd-item:hover { background:#eef2f7; }
+.nd-item.active { background:#dbe8fc; outline:2px solid #1e6bb8; }
+.nd-item svg { display:block; }
+
+/* ── Exercise overlay ── */
+#exercise-overlay {
+  display:none; position:absolute; top:0; left:0; width:100%; height:100%;
+  background:#d4e2ee; z-index:10;
+  flex-direction:column; align-items:center; justify-content:center;
+}
+#exercise-overlay.visible { display:flex; }
+#ex-grid {
+  display:grid; grid-template-columns:repeat(4,1fr);
+  gap:12px; padding:20px; max-width:700px; width:100%;
+}
+.ex-card {
+  aspect-ratio:1; background:#fff; border:2px solid #cdd3db;
+  border-radius:10px; cursor:pointer; position:relative;
+  transition:border-color .2s, transform .15s, box-shadow .2s;
+  display:flex; align-items:center; justify-content:center;
+}
+.ex-card:hover { border-color:#1e6bb8; transform:scale(1.03); box-shadow:0 3px 12px rgba(0,0,0,.12); }
+.ex-card.selected { border-color:#f59e0b; border-width:3px; box-shadow:0 0 0 3px rgba(245,158,11,.25); }
+.ex-card.matched { border-color:#22c55e; background:#f0fdf4; pointer-events:none; }
+.ex-card.wrong { border-color:#ef4444; animation:shake .4s; }
+.ex-card.correct-pick { border-color:#22c55e; border-width:3px; }
+.ex-card.wrong-pick { border-color:#ef4444; border-width:3px; }
+.ex-card.revealed-real { border-color:#22c55e; background:#f0fdf4; }
+.ex-card.revealed-fake { border-color:#ef4444; background:#fef2f2; }
+.ex-card canvas { width:100%; height:100%; border-radius:8px; }
+@keyframes shake {
+  0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(4px)}
+}
+#ex-status { margin-top:16px; font-size:15px; font-weight:600; color:#4a5a6a; min-height:28px; text-align:center; }
+#ex-score { position:absolute; top:14px; right:20px; font-size:13px; font-weight:600; color:#1e6bb8; }
+
+/* ── Opposite exercise bar ── */
+#opp-bar {
+  display:none; position:absolute; bottom:0; left:0; width:100%;
+  background:rgba(255,255,255,.92); border-top:1px solid #dde1e8;
+  padding:10px 20px; z-index:12;
+  align-items:center; gap:14px; justify-content:center;
+  box-shadow:0 -2px 8px rgba(0,0,0,.08);
+}
+#opp-bar.visible { display:flex; }
+#opp-status { font-size:14px; font-weight:600; color:#4a5a6a; }
+#opp-score { font-size:13px; font-weight:600; color:#1e6bb8; }
+</style>
+</head>
+<body>
+<div id="toolbar">
+  <div class="t-group">
+    <span style="font-size:15px;font-weight:700;color:#1e6bb8;letter-spacing:.2px">🧩 Würfelnetz</span>
+  </div>
+  <div class="t-sep"></div>
+  <div class="t-group">
+    <span class="t-label">Netz:</span>
+    <div id="net-dd">
+      <div id="net-dd-btn"><span id="net-dd-preview"></span><span class="arrow">▾</span></div>
+      <div id="net-dd-list"></div>
+    </div>
+  </div>
+  <div class="t-sep"></div>
+  <div class="t-group">
+    <span class="t-label">Zustand:</span>
+    <div id="state-chip"><div id="state-dot"></div><span id="state-text">Netz</span></div>
+  </div>
+  <div class="t-sep"></div>
+  <div class="t-group">
+    <button class="vbtn active" id="fold-btn">▶ Zusammenfalten</button>
+  </div>
+  <div class="t-sep"></div>
+  <div class="t-group">
+    <span class="t-label">Ansicht:</span>
+    <button class="vbtn" id="top-btn" title="Plan-Ansicht">Plan</button>
+    <button class="vbtn" id="net-rot-l-btn" title="Netz 90° links">↶ L</button>
+    <button class="vbtn" id="net-rot-r-btn" title="Netz 90° rechts">↷ R</button>
+    <button class="vbtn" id="rot-h-btn" title="Horizontal drehen">↻ H</button>
+    <button class="vbtn" id="rot-v-btn" title="Vertikal drehen">↕ V</button>
+    <button class="vbtn" id="mirror-btn" title="Spiegeln">⇔ Spiegeln</button>
+  </div>
+  <div class="t-sep"></div>
+  <div class="t-group">
+    <span class="t-label">Übung:</span>
+    <select id="exercise-select" class="t-sel">
+      <option value="none">– keine –</option>
+      <option value="pairs">Paare finden</option>
+      <option value="real">Echte Netze erkennen</option>
+      <option value="opposite">Gegenüberliegende Seite</option>
+    </select>
+  </div>
+  <div class="t-sep"></div>
+  <div class="t-group" style="margin-left:auto">
+    <span class="t-label">Ziehen: drehen · Scrollen: zoomen</span>
+  </div>
+</div>
+<div id="prog-wrap"><div id="prog-bar"></div></div>
+<div id="wrap">
+  <div id="pane-label">3D-ANSICHT</div>
+  <div id="legend">
+    <div class="fc"><div class="fd" style="background:#e74c3c"></div><span class="fl">1</span></div>
+    <div class="fc"><div class="fd" style="background:#e67e22"></div><span class="fl">2</span></div>
+    <div class="fc"><div class="fd" style="background:#2ecc71"></div><span class="fl">3</span></div>
+    <div class="fc"><div class="fd" style="background:#3498db"></div><span class="fl">4</span></div>
+    <div class="fc"><div class="fd" style="background:#9b59b6"></div><span class="fl">5</span></div>
+    <div class="fc"><div class="fd" style="background:#e74c8b"></div><span class="fl">6</span></div>
+  </div>
+  <div id="help">Linksklick/Ziehen: drehen · Scrollen: zoomen</div>
+
+  <div id="exercise-overlay">
+    <div id="ex-score"></div>
+    <div id="ex-grid"></div>
+    <div id="ex-status"></div>
+    <button class="vbtn" id="ex-new-btn" style="margin-top:12px;padding:8px 20px;font-size:14px">🔄 Neue Aufgabe</button>
+  </div>
+
+  <div id="opp-bar">
+    <span id="opp-status">Welches Quadrat liegt dem markierten gegenüber?</span>
+    <span id="opp-score"></span>
+    <button class="vbtn" id="opp-new-btn" style="padding:4px 14px">Nächste ▶</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+"use strict";
+
+/* ═══ THREE.JS SCENE ═══ */
+var wrap = document.getElementById('wrap');
+var renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled = true;
+wrap.prepend(renderer.domElement);
+
+var scene = new THREE.Scene();
+scene.background = new THREE.Color(0xd4e2ee);
+var camera = new THREE.PerspectiveCamera(44,1,.1,100);
+camera.position.set(0,2,8.5); camera.lookAt(0,0,0);
+
+scene.add(new THREE.AmbientLight(0xffffff,.72));
+var sun = new THREE.DirectionalLight(0xffffff,.72);
+sun.position.set(6,12,8); sun.castShadow=true; scene.add(sun);
+var fl = new THREE.DirectionalLight(0xddeeff,.22);
+fl.position.set(-5,4,-7); scene.add(fl);
+
+var PI = Math.PI;
+
+function makeFace(color) {
+  var border = new THREE.Mesh(
+    new THREE.PlaneGeometry(1,1),
+    new THREE.MeshBasicMaterial({color:0xd4e2ee,side:THREE.FrontSide})
+  );
+  border.position.z = -.003;
+  var face = new THREE.Mesh(
+    new THREE.PlaneGeometry(.96,.96),
+    new THREE.MeshLambertMaterial({color:color,side:THREE.DoubleSide})
+  );
+  face.castShadow = true;
+  face.add(border);
+  return face;
+}
+
+var rotGroup = new THREE.Group(); scene.add(rotGroup);
+var group = new THREE.Group(); rotGroup.add(group);
+
+var COLORS = [0xe74c3c,0xe67e22,0x2ecc71,0x3498db,0x9b59b6,0xe74c8b];
+
+var RAW_NETS = [
+  [[0,0],[0,1],[0,2],[1,2],[1,3],[1,4]],
+  [[0,0],[0,1],[1,1],[1,2],[1,3],[2,1]],
+  [[0,0],[0,1],[1,1],[1,2],[1,3],[2,2]],
+  [[0,0],[0,1],[1,1],[1,2],[1,3],[2,3]],
+  [[0,0],[0,1],[1,1],[1,2],[2,2],[2,3]],
+  [[0,1],[1,0],[1,1],[1,2],[1,3],[2,1]],
+  [[0,1],[1,0],[1,1],[1,2],[1,3],[2,2]],
+  [[0,0],[0,1],[0,2],[1,1],[2,1],[3,1]],
+  [[0,0],[0,1],[1,1],[1,2],[2,1],[3,1]],
+  [[0,0],[0,1],[1,1],[2,1],[2,2],[3,1]],
+  [[0,0],[0,1],[1,1],[2,1],[3,1],[3,2]]
+];
+
+/* ═══ BUILD NET ═══ */
+var pivotList = [];
+var netCX = 0, netCY = 0;
+var faceMeshes = [];
+
+function buildNet(coords, colors) {
+  while (group.children.length) group.remove(group.children[0]);
+  pivotList = []; faceMeshes = [];
+  var useColors = colors || COLORS;
+  var par = []; for(var i=0;i<6;i++) par[i]=-2;
+  par[0] = -1;
+  var queue = [0], qi = 0;
+  while (qi < queue.length) {
+    var ci = queue[qi++];
+    var cx = coords[ci][0], cy = coords[ci][1];
+    for (var j = 0; j < 6; j++) {
+      if (par[j] !== -2) continue;
+      if (Math.abs(cx-coords[j][0])+Math.abs(cy-coords[j][1]) === 1) {
+        par[j] = ci; queue.push(j);
+      }
+    }
+  }
+  var sx=0,sy=0;
+  for (i=0;i<6;i++) { sx+=coords[i][0]; sy+=coords[i][1]; }
+  netCX=sx/6; netCY=sy/6;
+  group.position.set(-netCX,-netCY,0);
+  var info = [];
+  for (var qi2=0; qi2<queue.length; qi2++) {
+    var fi = queue[qi2];
+    var gx=coords[fi][0], gy=coords[fi][1];
+    var face = makeFace(useColors[fi]);
+    faceMeshes[fi] = face;
+    var pi = par[fi];
+    if (pi===-1) {
+      face.position.set(gx,gy,0); group.add(face);
+      info[fi]={obj:group,absX:0,absY:0};
+    } else {
+      var px=coords[pi][0],py=coords[pi][1];
+      var pI=info[pi];
+      var dx=gx-px,dy=gy-py;
+      var fa,fg;
+      if(dx===1){fa='y';fg=PI/2;}else if(dx===-1){fa='y';fg=-PI/2;}
+      else if(dy===1){fa='x';fg=-PI/2;}else{fa='x';fg=PI/2;}
+      var pAX=px+dx*.5,pAY=py+dy*.5;
+      var piv=new THREE.Group();
+      piv.position.set(pAX-pI.absX,pAY-pI.absY,0);
+      pI.obj.add(piv);
+      face.position.set(dx*.5,dy*.5,0); piv.add(face);
+      pivotList.push({pivot:piv,foldAxis:fa,foldAngle:fg});
+      info[fi]={obj:piv,absX:pAX,absY:pAY};
+    }
+  }
+}
+
+/* ═══ ANIMATION ═══ */
+var progress=0, isCube=false, isAnim=false;
+var SPEED=3.0;
+function ease(t){return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;}
+
+var oppMode=false, oppDone=false;
+
+function applyProgress(t){
+  var e=ease(t);
+  for(var i=0;i<pivotList.length;i++){
+    var p=pivotList[i];
+    if(p.foldAxis==='y') p.pivot.rotation.y=e*p.foldAngle;
+    else p.pivot.rotation.x=e*p.foldAngle;
+  }
+  group.position.x=-netCX*(1-e);
+  group.position.y=-netCY*(1-e);
+  group.position.z=.5*e;
+  document.getElementById('prog-bar').style.width=(t*100).toFixed(1)+'%';
+
+  // Opposite exercise: fade faces during fold
+  if(oppMode && oppDone && e>0){
+    var opacity=1.0-e*0.55;
+    for(i=0;i<6;i++){
+      if(!faceMeshes[i]) continue;
+      faceMeshes[i].material.transparent=true;
+      faceMeshes[i].material.opacity=opacity;
+      var border=faceMeshes[i].children[0];
+      if(border){border.material.transparent=true;border.material.opacity=opacity*0.5;}
+    }
+  }
+}
+
+/* ═══ MOUSE / TOUCH ═══ */
+var rotX=-.15,rotY=.25,tRX=-.15,tRY=.25;
+var isDrag=false,mpx=0,mpy=0,autoRot=true;
+var cvs=renderer.domElement;
+cvs.addEventListener('mousedown',function(e){isDrag=true;mpx=e.clientX;mpy=e.clientY;autoRot=false;camera.up.set(0,1,0);camera.lookAt(0,0,0);});
+window.addEventListener('mousemove',function(e){if(!isDrag)return;rotY+=(e.clientX-mpx)*.009;rotX+=(e.clientY-mpy)*.009;rotX=Math.max(-1.3,Math.min(1.3,rotX));tRX=rotX;tRY=rotY;mpx=e.clientX;mpy=e.clientY;});
+window.addEventListener('mouseup',function(){isDrag=false;});
+cvs.addEventListener('touchstart',function(e){isDrag=true;mpx=e.touches[0].clientX;mpy=e.touches[0].clientY;autoRot=false;camera.up.set(0,1,0);camera.lookAt(0,0,0);},{passive:true});
+window.addEventListener('touchmove',function(e){if(!isDrag)return;rotY+=(e.touches[0].clientX-mpx)*.009;rotX+=(e.touches[0].clientY-mpy)*.009;rotX=Math.max(-1.3,Math.min(1.3,rotX));tRX=rotX;tRY=rotY;mpx=e.touches[0].clientX;mpy=e.touches[0].clientY;},{passive:true});
+window.addEventListener('touchend',function(){isDrag=false;});
+cvs.addEventListener('wheel',function(e){camera.position.multiplyScalar(1+e.deltaY*.0009);camera.position.clampLength(2.5,18);},{passive:true});
+
+/* ═══ BUTTONS ═══ */
+var btn=document.getElementById('fold-btn');
+var stateDot=document.getElementById('state-dot');
+var stateTxt=document.getElementById('state-text');
+btn.addEventListener('click',function(){if(isAnim)return;isCube=!isCube;isAnim=true;btn.disabled=true;autoRot=false;});
+
+var mirrored=false;
+document.getElementById('top-btn').addEventListener('click',function(){
+  var d=camera.position.length();camera.position.set(0,0,d);camera.up.set(0,1,0);camera.lookAt(0,0,0);
+  rotX=0;tRX=0;rotY=0;tRY=0;autoRot=false;
+});
+document.getElementById('rot-h-btn').addEventListener('click',function(){tRY+=PI;autoRot=false;});
+document.getElementById('rot-v-btn').addEventListener('click',function(){tRX-=PI;autoRot=false;});
+document.getElementById('mirror-btn').addEventListener('click',function(){
+  mirrored=!mirrored;rotGroup.scale.x=mirrored?-1:1;
+  document.getElementById('mirror-btn').classList.toggle('active',mirrored);
+});
+var netRotZ=0,tNRZ=0;
+function snapPlan(){var d=camera.position.length();camera.position.set(0,0,d);camera.up.set(0,1,0);camera.lookAt(0,0,0);rotX=0;tRX=0;rotY=0;tRY=0;autoRot=false;}
+document.getElementById('net-rot-l-btn').addEventListener('click',function(){snapPlan();tNRZ+=PI/2;});
+document.getElementById('net-rot-r-btn').addEventListener('click',function(){snapPlan();tNRZ-=PI/2;});
+
+/* ═══ NET DROPDOWN WITH SVG PREVIEWS ═══ */
+var currentNetIdx=0;
+
+function makeNetSVG(coords, size, color) {
+  var mnx=99,mny=99,mxx=-99,mxy=-99;
+  for(var i=0;i<coords.length;i++){
+    var x=coords[i][0],y=coords[i][1];
+    if(x<mnx)mnx=x;if(y<mny)mny=y;if(x>mxx)mxx=x;if(y>mxy)mxy=y;
+  }
+  var gw=mxx-mnx+1,gh=mxy-mny+1;
+  var cell=Math.floor((size-4)/Math.max(gw,gh));
+  var sw=gw*cell+4,sh=gh*cell+4;
+  var html='';
+  for(i=0;i<coords.length;i++){
+    var rx=2+(coords[i][0]-mnx)*cell+1;
+    var ry=2+(gh-1-(coords[i][1]-mny))*cell+1;
+    html+='<rect x="'+rx+'" y="'+ry+'" width="'+(cell-2)+'" height="'+(cell-2)+'" fill="'+color+'" rx="1"/>';
+  }
+  var svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('width',sw);
+  svg.setAttribute('height',sh);
+  svg.setAttribute('viewBox','0 0 '+sw+' '+sh);
+  svg.innerHTML=html;
+  return svg;
+}
+
+var ddBtn=document.getElementById('net-dd-btn');
+var ddList=document.getElementById('net-dd-list');
+var ddPrev=document.getElementById('net-dd-preview');
+
+function updateDDPreview(idx){
+  ddPrev.innerHTML='';
+  ddPrev.appendChild(makeNetSVG(RAW_NETS[idx],36,'#1e6bb8'));
+}
+
+for(var ni=0;ni<RAW_NETS.length;ni++){
+  (function(i){
+    var item=document.createElement('div');
+    item.className='nd-item'+(i===0?' active':'');
+    item.appendChild(makeNetSVG(RAW_NETS[i],56,'#8da4bf'));
+    item.addEventListener('click',function(){
+      currentNetIdx=i;
+      ddList.classList.remove('open');
+      updateDDPreview(i);
+      var items=ddList.querySelectorAll('.nd-item');
+      for(var k=0;k<items.length;k++) items[k].classList.toggle('active',k===i);
+      switchNet(i);
+    });
+    ddList.appendChild(item);
+  })(ni);
+}
+updateDDPreview(0);
+
+ddBtn.addEventListener('click',function(e){e.stopPropagation();ddList.classList.toggle('open');});
+document.addEventListener('click',function(){ddList.classList.remove('open');});
+ddList.addEventListener('click',function(e){e.stopPropagation();});
+
+function switchNet(i){
+  currentNetIdx=i;
+  progress=0;isCube=false;isAnim=false;
+  btn.disabled=false;btn.textContent='▶ Zusammenfalten';btn.classList.add('active');
+  stateDot.className='';stateTxt.textContent='Netz';
+  mirrored=false;rotGroup.scale.x=1;
+  document.getElementById('mirror-btn').classList.remove('active');
+  netRotZ=0;tNRZ=0;
+  buildNet(RAW_NETS[i]);applyProgress(0);
+}
+
+/* ═══ RESIZE + LOOP ═══ */
+function resizeAll(){var w=wrap.clientWidth,h=wrap.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}
+window.addEventListener('resize',resizeAll);
+
+var last=0;
+function animate(now){
+  requestAnimationFrame(animate);
+  var dt=Math.min((now-last)/1e3,.05);last=now;
+  if(autoRot&&!isDrag){rotY+=dt*.25;tRY=rotY;}
+  rotX+=(tRX-rotX)*Math.min(1,dt*8);rotY+=(tRY-rotY)*Math.min(1,dt*8);
+  netRotZ+=(tNRZ-netRotZ)*Math.min(1,dt*8);
+  rotGroup.rotation.x=rotX;rotGroup.rotation.y=rotY;rotGroup.rotation.z=netRotZ;
+  if(isAnim){
+    progress+=(isCube?1:-1)*dt/SPEED;progress=Math.max(0,Math.min(1,progress));
+    applyProgress(progress);
+    if((isCube&&progress>=1)||(!isCube&&progress<=0)){
+      isAnim=false;btn.disabled=false;
+      if(isCube){btn.textContent='◀ Auffalten';btn.classList.remove('active');stateDot.className='cube';stateTxt.textContent='Würfel';}
+      else{btn.textContent='▶ Zusammenfalten';btn.classList.add('active');stateDot.className='';stateTxt.textContent='Netz';}
+    }
+  }
+  renderer.render(scene,camera);
+}
+switchNet(0);resizeAll();animate(0);
+
+/* ═══════════════════════════════════════════════════════════════
+   EXERCISES
+   ═══════════════════════════════════════════════════════════════ */
+
+var exOverlay=document.getElementById('exercise-overlay');
+var exGrid=document.getElementById('ex-grid');
+var exStatus=document.getElementById('ex-status');
+var exScore=document.getElementById('ex-score');
+var exSelDrop=document.getElementById('exercise-select');
+var oppBar=document.getElementById('opp-bar');
+
+var CARD_COLORS=['#5b8def','#e8913a','#50b87a','#e25d6a','#9b6dd7','#e0a032'];
+
+function transformNet(coords,rot90,mirX){
+  var pts=[];for(var i=0;i<coords.length;i++)pts.push([coords[i][0],coords[i][1]]);
+  for(var r=0;r<rot90;r++){var np=[];for(i=0;i<pts.length;i++)np.push([pts[i][1],-pts[i][0]]);pts=np;}
+  if(mirX){np=[];for(i=0;i<pts.length;i++)np.push([-pts[i][0],pts[i][1]]);pts=np;}
+  var mnx=99,mny=99;for(i=0;i<pts.length;i++){if(pts[i][0]<mnx)mnx=pts[i][0];if(pts[i][1]<mny)mny=pts[i][1];}
+  var out=[];for(i=0;i<pts.length;i++)out.push([pts[i][0]-mnx,pts[i][1]-mny]);
+  return out;
+}
+
+function drawNetOnCanvas(canvas,coords,color){
+  var ctx=canvas.getContext('2d');var w=canvas.width,h=canvas.height;ctx.clearRect(0,0,w,h);
+  var mnx=99,mny=99,mxx=-99,mxy=-99;
+  for(var i=0;i<coords.length;i++){var x=coords[i][0],y=coords[i][1];if(x<mnx)mnx=x;if(y<mny)mny=y;if(x>mxx)mxx=x;if(y>mxy)mxy=y;}
+  var gw=mxx-mnx+1,gh=mxy-mny+1;var pad=12;
+  var cell=(Math.min(w,h)-pad*2)/6;
+  var offX=(w-gw*cell)/2,offY=(h-gh*cell)/2;
+  for(i=0;i<coords.length;i++){
+    var cx2=offX+(coords[i][0]-mnx)*cell,cy2=offY+(gh-1-(coords[i][1]-mny))*cell;
+    ctx.fillStyle=color;ctx.fillRect(cx2+1.5,cy2+1.5,cell-3,cell-3);
+    ctx.strokeStyle='rgba(0,0,0,0.15)';ctx.lineWidth=1;ctx.strokeRect(cx2+1.5,cy2+1.5,cell-3,cell-3);
+  }
+}
+
+function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
+
+/* ── Exercise 1: Paare finden ── */
+var exSelected=null,matchesFound=0,attempts=0;
+
+function startPairsExercise(){
+  exGrid.innerHTML='';exSelected=null;matchesFound=0;attempts=0;
+  exStatus.textContent='Finde die 6 Paare! Klicke zwei Netze an, die zusammengehören.';
+  exStatus.style.color='#4a5a6a';exScore.textContent='';
+  var indices=shuffle([0,1,2,3,4,5,6,7,8,9,10]).slice(0,6);
+  var cards=[];
+  for(var pi2=0;pi2<indices.length;pi2++){
+    var ni2=indices[pi2],orig=RAW_NETS[ni2];
+    var origRot=Math.floor(Math.random()*4);
+    var origCoords=transformNet(orig,origRot,false);
+    var partnerCoords,tries=0;
+    do{var pRot=Math.floor(Math.random()*4);var pMir=Math.random()>.4;partnerCoords=transformNet(orig,pRot,pMir);tries++;}
+    while(tries<20&&JSON.stringify(origCoords)===JSON.stringify(partnerCoords));
+    var col=CARD_COLORS[pi2];
+    cards.push({pairId:pi2,coords:origCoords,color:col});
+    cards.push({pairId:pi2,coords:partnerCoords,color:col});
+  }
+  shuffle(cards);
+  for(var ci2=0;ci2<cards.length;ci2++){
+    (function(card,idx){
+      var div=document.createElement('div');div.className='ex-card';
+      var c=document.createElement('canvas');c.width=160;c.height=160;div.appendChild(c);
+      drawNetOnCanvas(c,card.coords,'#6b8aad');
+      div.addEventListener('click',function(){onPairClick(div,card,c);});
+      exGrid.appendChild(div);
+    })(cards[ci2],ci2);
+  }
+}
+
+function onPairClick(div,card,canvas){
+  if(div.classList.contains('matched')||div.classList.contains('selected'))return;
+  if(!exSelected){exSelected={div:div,card:card,canvas:canvas};div.classList.add('selected');drawNetOnCanvas(canvas,card.coords,card.color);}
+  else{
+    attempts++;var first=exSelected;div.classList.add('selected');drawNetOnCanvas(canvas,card.coords,card.color);
+    if(first.card.pairId===card.pairId){matchesFound++;
+      setTimeout(function(){first.div.classList.remove('selected');first.div.classList.add('matched');div.classList.remove('selected');div.classList.add('matched');
+        exScore.textContent=matchesFound+'/6 Paare · '+attempts+' Versuche';
+        if(matchesFound===6){exStatus.textContent='🎉 Alle Paare gefunden! '+attempts+' Versuche.';exStatus.style.color='#16a34a';}
+      },400);
+    }else{first.div.classList.add('wrong');div.classList.add('wrong');
+      setTimeout(function(){first.div.classList.remove('selected','wrong');div.classList.remove('selected','wrong');
+        drawNetOnCanvas(first.canvas,first.card.coords,'#6b8aad');drawNetOnCanvas(canvas,card.coords,'#6b8aad');
+      },700);exScore.textContent=matchesFound+'/6 Paare · '+attempts+' Versuche';
+    }
+    exSelected=null;
+  }
+}
+
+/* ── Exercise 2: Echte Netze erkennen ── */
+var FAKE_NETS=[
+  [[0,0],[0,1],[0,2],[0,3],[0,4],[1,2]],[[0,0],[0,1],[0,2],[0,3],[1,0],[1,3]],
+  [[0,0],[0,1],[0,2],[0,3],[1,1],[1,2]],[[0,0],[0,1],[0,2],[1,0],[1,1],[2,1]],
+  [[0,0],[0,1],[0,2],[1,1],[1,2],[2,1]],[[0,0],[0,1],[0,2],[1,1],[1,2],[2,2]],
+  [[0,0],[0,1],[0,2],[1,2],[2,2],[3,2]],[[0,0],[0,1],[1,0],[1,1],[1,2],[2,0]],
+  [[0,0],[0,1],[1,0],[1,1],[2,0],[2,1]],[[0,0],[0,1],[1,0],[1,1],[2,1],[2,2]],
+  [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]],[[0,0],[0,1],[1,0],[1,1],[1,2],[2,2]],
+  [[0,0],[0,1],[0,2],[0,3],[1,3],[1,4]],[[0,0],[0,1],[1,0],[1,1],[2,0],[3,0]]
+];
+
+var realPicks=[],realCards=[],realDone2=false;
+
+function startRealExercise(){
+  exGrid.innerHTML='';realPicks=[];realCards=[];realDone2=false;
+  exStatus.textContent='Welche 5 sind echte Würfelnetze? Klicke sie an!';exStatus.style.color='#4a5a6a';exScore.textContent='0 / 5 gewählt';
+  var realIdx=shuffle([0,1,2,3,4,5,6,7,8,9,10]).slice(0,5);
+  var fakeIdx=shuffle([0,1,2,3,4,5,6,7,8,9,10,11,12,13]).slice(0,7);
+  var cards2=[];
+  for(var i=0;i<realIdx.length;i++){var rot=Math.floor(Math.random()*4);var mir=Math.random()>.5;cards2.push({coords:transformNet(RAW_NETS[realIdx[i]],rot,mir),isReal:true});}
+  for(i=0;i<fakeIdx.length;i++){rot=Math.floor(Math.random()*4);mir=Math.random()>.5;cards2.push({coords:transformNet(FAKE_NETS[fakeIdx[i]],rot,mir),isReal:false});}
+  shuffle(cards2);realCards=cards2;
+  for(i=0;i<cards2.length;i++){
+    (function(idx){
+      var div=document.createElement('div');div.className='ex-card';div.dataset.idx=idx;
+      var c=document.createElement('canvas');c.width=160;c.height=160;div.appendChild(c);
+      drawNetOnCanvas(c,cards2[idx].coords,'#6b8aad');
+      div.addEventListener('click',function(){onRealClick(div,idx);});
+      exGrid.appendChild(div);
+    })(i);
+  }
+}
+
+function onRealClick(div,idx){
+  if(realDone2)return;
+  var pos=realPicks.indexOf(idx);
+  if(pos>=0){realPicks.splice(pos,1);div.classList.remove('selected');}
+  else{if(realPicks.length>=5)return;realPicks.push(idx);div.classList.add('selected');}
+  exScore.textContent=realPicks.length+' / 5 gewählt';
+  if(realPicks.length===5){realDone2=true;setTimeout(checkRealAnswers,400);}
+}
+
+function checkRealAnswers(){
+  var correct=0;var allC=exGrid.querySelectorAll('.ex-card');
+  for(var i=0;i<allC.length;i++){
+    var card=realCards[i];var picked=realPicks.indexOf(i)>=0;
+    var c=allC[i].querySelector('canvas');allC[i].classList.remove('selected');
+    if(card.isReal&&picked){allC[i].classList.add('revealed-real');drawNetOnCanvas(c,card.coords,'#22c55e');correct++;}
+    else if(card.isReal&&!picked){allC[i].classList.add('revealed-real');drawNetOnCanvas(c,card.coords,'#86efac');}
+    else if(!card.isReal&&picked){allC[i].classList.add('revealed-fake');drawNetOnCanvas(c,card.coords,'#ef4444');}
+    else{drawNetOnCanvas(c,card.coords,'#d1d5db');}
+  }
+  exScore.textContent=correct+' / 5 richtig';
+  if(correct===5){exStatus.textContent='🎉 Perfekt! Alle 5 echten Würfelnetze erkannt!';exStatus.style.color='#16a34a';}
+  else{exStatus.textContent=correct+' von 5 richtig. Grün = echte Netze, Rot = falsch gewählt.';exStatus.style.color='#dc2626';}
+}
+
+document.getElementById('ex-new-btn').addEventListener('click',function(){
+  if(currentExercise==='pairs')startPairsExercise();
+  else if(currentExercise==='real')startRealExercise();
+});
+
+/* ── Exercise 3: Gegenüberliegende Seite (3D) ── */
+
+var OPPOSITES=[
+  {0:2,2:0,1:4,4:1,3:5,5:3},{0:3,3:0,1:5,5:1,2:4,4:2},{0:3,3:0,1:5,5:1,2:4,4:2},
+  {0:3,3:0,1:5,5:1,2:4,4:2},{0:3,3:0,1:4,4:1,2:5,5:2},{0:5,5:0,1:3,3:1,2:4,4:2},
+  {0:5,5:0,1:3,3:1,2:4,4:2},{0:2,2:0,1:4,4:1,3:5,5:3},{0:3,3:0,1:4,4:1,2:5,5:2},
+  {0:4,4:0,1:3,3:1,2:5,5:2},{0:5,5:0,1:3,3:1,2:4,4:2}
+];
+
+var C_NEUTRAL=0xe8edf3,C_MARKED=0xf59e0b,C_CORRECT=0x22c55e,C_WRONG=0xef4444;
+var oppStatus2=document.getElementById('opp-status');
+var oppScoreEl=document.getElementById('opp-score');
+var raycaster=new THREE.Raycaster();
+var mouse=new THREE.Vector2();
+
+var oppNetIdx=0,oppMarked=0,oppAnswer=0,oppPlayerPick=-1;
+var oppCorrectCount=0,oppTotalCount=0;
+
+function setFaceColor(idx,color){if(faceMeshes[idx])faceMeshes[idx].material.color.setHex(color);}
+
+function resetFaceTransparency(){
+  for(var i=0;i<6;i++){
+    if(!faceMeshes[i])continue;
+    faceMeshes[i].material.transparent=false;faceMeshes[i].material.opacity=1;
+    var b=faceMeshes[i].children[0];if(b){b.material.transparent=false;b.material.opacity=1;}
+  }
+}
+
+function startOppositeExercise(){
+  oppMode=true;oppDone=false;oppPlayerPick=-1;
+  oppBar.classList.add('visible');
+  progress=0;isCube=false;isAnim=false;
+  btn.disabled=false;btn.textContent='▶ Zusammenfalten';btn.classList.add('active');
+  stateDot.className='';stateTxt.textContent='Netz';
+  mirrored=false;rotGroup.scale.x=1;
+  document.getElementById('mirror-btn').classList.remove('active');
+  netRotZ=0;tNRZ=0;
+  snapPlan();
+  oppNetIdx=Math.floor(Math.random()*11);
+  oppMarked=Math.floor(Math.random()*6);
+  oppAnswer=OPPOSITES[oppNetIdx][oppMarked];
+  var cols=[C_NEUTRAL,C_NEUTRAL,C_NEUTRAL,C_NEUTRAL,C_NEUTRAL,C_NEUTRAL];
+  cols[oppMarked]=C_MARKED;
+  buildNet(RAW_NETS[oppNetIdx],cols);
+  resetFaceTransparency();
+  applyProgress(0);
+  oppStatus2.textContent='Welches Quadrat liegt dem orangenen gegenüber?';oppStatus2.style.color='#4a5a6a';
+  oppScoreEl.textContent=oppTotalCount>0?oppCorrectCount+'/'+oppTotalCount:'';
+}
+
+cvs.addEventListener('click',function(e){
+  if(!oppMode||oppDone||isAnim)return;
+  var rect=cvs.getBoundingClientRect();
+  mouse.x=((e.clientX-rect.left)/rect.width)*2-1;
+  mouse.y=-((e.clientY-rect.top)/rect.height)*2+1;
+  raycaster.setFromCamera(mouse,camera);
+  var meshes=[];for(var i=0;i<6;i++)if(faceMeshes[i])meshes.push(faceMeshes[i]);
+  var hits=raycaster.intersectObjects(meshes,false);
+  if(hits.length>0){
+    var hitMesh=hits[0].object;
+    var fIdx=-1;for(i=0;i<6;i++)if(faceMeshes[i]===hitMesh){fIdx=i;break;}
+    if(fIdx===-1||fIdx===oppMarked)return;
+    oppDone=true;oppTotalCount++;oppPlayerPick=fIdx;
+    var ok=fIdx===oppAnswer;if(ok)oppCorrectCount++;
+    setFaceColor(fIdx,ok?C_CORRECT:C_WRONG);
+    if(!ok)setFaceColor(oppAnswer,C_CORRECT);
+    oppScoreEl.textContent=oppCorrectCount+'/'+oppTotalCount;
+    oppStatus2.textContent=ok?'✅ Richtig!':'❌ Falsch – die grüne Fläche wäre richtig.';
+    oppStatus2.style.color=ok?'#16a34a':'#dc2626';
+    setTimeout(function(){
+      if(!oppMode)return;
+      isCube=true;isAnim=true;btn.disabled=true;autoRot=false;
+      tRX=-0.6;tRY=0.75;
+    },800);
+  }
+});
+
+document.getElementById('opp-new-btn').addEventListener('click',function(){startOppositeExercise();});
+
+/* ═══ EXERCISE DROPDOWN ═══ */
+var currentExercise='none';
+exSelDrop.addEventListener('change',function(){
+  currentExercise=exSelDrop.value;
+  exOverlay.classList.remove('visible');
+  oppBar.classList.remove('visible');
+  oppMode=false;
+  if(currentExercise==='pairs'){exOverlay.classList.add('visible');startPairsExercise();}
+  else if(currentExercise==='real'){exOverlay.classList.add('visible');startRealExercise();}
+  else if(currentExercise==='opposite'){startOppositeExercise();}
+  else{switchNet(currentNetIdx);}
+});
+</script>
+</body>
+</html>
