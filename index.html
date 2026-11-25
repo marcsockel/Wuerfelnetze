@@ -19,8 +19,8 @@ body {
 }
 #toolbar {
   display:flex; align-items:center; flex-wrap:wrap; gap:10px;
-  padding:7px 14px; background:#fff;
-  border-bottom:1px solid #dde1e8;
+  padding:7px 14px; background:#1e6bb8;
+  border-bottom:1px solid #15589a;
   box-shadow:0 1px 6px rgba(0,0,0,.07);
   z-index:20; min-height:48px; flex-shrink:0;
 }
@@ -63,7 +63,7 @@ select.t-sel {
 #state-dot.cube { background:#1a7a40; }
 #prog-wrap { height:3px; background:#e4e8ed; overflow:hidden; flex-shrink:0; }
 #prog-bar  { height:100%; width:0%; background:#1e6bb8; transition:width .05s linear; }
-#wrap { flex:1; position:relative; overflow:hidden; background:#d4e2ee; }
+#wrap { flex:1; position:relative; overflow:hidden; background:#fff; }
 canvas { display:block; width:100%; height:100%; position:absolute; top:0; left:0; }
 #legend {
   position:absolute; left:13px; top:50%; transform:translateY(-50%);
@@ -120,7 +120,7 @@ canvas { display:block; width:100%; height:100%; position:absolute; top:0; left:
 /* ── Exercise overlay ── */
 #exercise-overlay {
   display:none; position:absolute; top:0; left:0; width:100%; height:100%;
-  background:#d4e2ee; z-index:10;
+  background:#fff; z-index:10;
   flex-direction:column; align-items:center; justify-content:center;
   overflow-y:auto;        /* scrollbar falls Inhalt doch zu groß */
   padding:12px 0;         /* Puffer oben/unten */
@@ -170,6 +170,22 @@ canvas { display:block; width:100%; height:100%; position:absolute; top:0; left:
 #opp-bar.visible { display:flex; }
 #opp-status { font-size:14px; font-weight:600; color:#4a5a6a; }
 #opp-score { font-size:13px; font-weight:600; color:#1e6bb8; }
+
+/* ── Blaue Werkzeugleiste ── */
+#toolbar .t-label { color:rgba(255,255,255,.85); }
+#toolbar .t-sep { background:rgba(255,255,255,.3); }
+#toolbar .vbtn { background:rgba(255,255,255,.14); color:#fff; border-color:rgba(255,255,255,.35); }
+#toolbar .vbtn:hover { background:rgba(255,255,255,.26); color:#fff; }
+#toolbar .vbtn.active { background:#fff; color:#1e6bb8; border-color:#fff; font-weight:700; }
+#toolbar select.t-sel { background:#fff; color:#1e3a5f; border-color:#fff; }
+#toolbar #state-chip { background:rgba(255,255,255,.14); border-color:rgba(255,255,255,.35); color:#fff; }
+#toolbar #state-dot { background:#fff; }
+#toolbar #state-dot.cube { background:#86efac; }
+#toolbar #net-dd-btn { background:#fff; border-color:#fff; }
+#toolbar #app-sw-title { color:#fff !important; }
+#toolbar #app-sw-title:hover, #toolbar #app-sw-title.open { background:rgba(255,255,255,.16); }
+#toolbar #app-sw-title::after { color:#1e6bb8; background:#fff; }
+.ex-card { box-shadow:0 1px 4px rgba(0,0,0,.08); }
 </style>
 </head>
 <body>
@@ -266,7 +282,7 @@ renderer.shadowMap.enabled = true;
 wrap.prepend(renderer.domElement);
 
 var scene = new THREE.Scene();
-scene.background = new THREE.Color(0xd4e2ee);
+scene.background = new THREE.Color(0xffffff);
 var camera = new THREE.PerspectiveCamera(44,1,.1,100);
 camera.position.set(0,2,8.5); camera.lookAt(0,0,0);
 
@@ -281,7 +297,7 @@ var PI = Math.PI;
 function makeFace(color) {
   var border = new THREE.Mesh(
     new THREE.PlaneGeometry(1,1),
-    new THREE.MeshBasicMaterial({color:0xd4e2ee,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:2,polygonOffsetUnits:2})
+    new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:2,polygonOffsetUnits:2})
   );
   border.position.z = 0;
   var face = new THREE.Mesh(
