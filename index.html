@@ -306,13 +306,35 @@ var pivotList = [];
 var netCX = 0, netCY = 0;
 var faceMeshes = [];
 
+function chooseBaseFace(coords) {
+  var n=coords.length, cx=0, cy=0, k;
+  for(k=0;k<n;k++){cx+=coords[k][0];cy+=coords[k][1];} cx/=n; cy/=n;
+  function adj(a,b){return Math.abs(coords[a][0]-coords[b][0])+Math.abs(coords[a][1]-coords[b][1])===1;}
+  var best=0, bestKey=null;
+  for(var r=0;r<n;r++){
+    var depth=[]; for(k=0;k<n;k++) depth[k]=-1;
+    depth[r]=0; var q=[r], h=0, maxD=0, sumD=0, deg=0;
+    while(h<q.length){var c=q[h++];for(k=0;k<n;k++){if(depth[k]<0&&adj(c,k)){depth[k]=depth[c]+1;maxD=Math.max(maxD,depth[k]);sumD+=depth[k];q.push(k);}}}
+    for(k=0;k<n;k++) if(k!==r&&adj(r,k)) deg++;
+    var dist=Math.abs(coords[r][0]-cx)+Math.abs(coords[r][1]-cy);
+    var key=[maxD,sumD,-deg,dist];
+    var better=bestKey===null;
+    for(var i=0;!better&&i<key.length;i++){ if(key[i]<bestKey[i]-1e-9){better=true;} else if(key[i]>bestKey[i]+1e-9) break; }
+    if(better){best=r;bestKey=key;}
+  }
+  return best;
+}
+
 function buildNet(coords, colors) {
   while (group.children.length) group.remove(group.children[0]);
   pivotList = []; faceMeshes = [];
   var useColors = colors || COLORS;
   var par = []; for(var i=0;i<6;i++) par[i]=-2;
-  par[0] = -1;
-  var queue = [0], qi = 0;
+  // Grundfläche (bleibt hinten liegen): die Fläche, von der aus alle anderen
+  // mit möglichst wenigen Faltschritten erreicht werden (meist die mittlere).
+  var root = chooseBaseFace(coords);
+  par[root] = -1;
+  var queue = [root], qi = 0;
   while (qi < queue.length) {
     var ci = queue[qi++];
     var cx = coords[ci][0], cy = coords[ci][1];
