@@ -757,5 +757,50 @@ exSelDrop.addEventListener('change',function(){
   else{switchNet(currentNetIdx);}
 });
 </script>
+<!-- APP-SWITCHER:START -->
+<style>
+#app-sw-title{cursor:pointer;user-select:none;-webkit-user-select:none;border-radius:8px;padding:4px 8px;margin:-4px -8px;transition:background .15s}
+#app-sw-title:hover,#app-sw-title.open{background:rgba(30,107,184,.10)}
+#app-sw-title::after{content:" ▾";font-size:12px;opacity:.7}
+#app-sw-backdrop{position:fixed;inset:0;z-index:9998;display:none}
+#app-sw-menu{position:fixed;z-index:9999;display:none;background:#fff;border-radius:14px;box-shadow:0 10px 32px rgba(20,40,80,.25);padding:8px;min-width:250px;font-family:'Segoe UI',system-ui,sans-serif}
+#app-sw-menu a{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:10px;font-size:18px;font-weight:600;color:#1e3a5f;text-decoration:none}
+#app-sw-menu a:hover{background:#eef4fb}
+#app-sw-menu a.current{background:#1e6bb8;color:#fff;pointer-events:none}
+#app-sw-menu .ico{font-size:24px;width:30px;text-align:center}
+</style>
+<div id="app-sw-backdrop"></div>
+<div id="app-sw-menu" role="menu"></div>
+<script>
+(function(){
+  var APPS=[
+    {id:'Stellenwert',     ico:'🔢', name:'Stellenwerttafel'},
+    {id:'Wuerfelnetze',    ico:'🧩', name:'Würfelnetz'},
+    {id:'Wuerfelgebaeude', ico:'🧊', name:'Würfelgebäude'},
+    {id:'Symmetrie',       ico:'🔁', name:'Symmetrie'}
+  ];
+  var title=document.querySelector('#toolbar span[style*="#1e6bb8"]')||document.querySelector('span[style*="#1e6bb8"]');
+  if(!title) return;
+  title.id='app-sw-title';
+  title.setAttribute('role','button');
+  title.title='App wechseln';
+  var menu=document.getElementById('app-sw-menu'), bd=document.getElementById('app-sw-backdrop');
+  var path=decodeURIComponent(location.pathname);
+  APPS.forEach(function(a){
+    var el=document.createElement('a');
+    el.href='../'+a.id+'/index.html';
+    el.innerHTML='<span class="ico">'+a.ico+'</span>'+a.name;
+    if(path.indexOf('/'+a.id+'/')>=0 || path.slice(-a.id.length-1)==='/'+a.id) el.className='current';
+    menu.appendChild(el);
+  });
+  function open(){var r=title.getBoundingClientRect();menu.style.left=Math.max(6,r.left-8)+'px';menu.style.top=(r.bottom+8)+'px';menu.style.display='block';bd.style.display='block';title.classList.add('open');}
+  function close(){menu.style.display='none';bd.style.display='none';title.classList.remove('open');}
+  title.addEventListener('click',function(e){e.stopPropagation();menu.style.display==='block'?close():open();});
+  bd.addEventListener('click',close);
+  bd.addEventListener('touchstart',function(e){e.preventDefault();close();},{passive:false});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
+})();
+</script>
+<!-- APP-SWITCHER:END -->
 </body>
 </html>
