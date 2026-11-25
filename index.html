@@ -214,6 +214,17 @@ canvas { display:block; width:100%; height:100%; position:absolute; top:0; left:
       <option value="opposite">Gegenüberliegende Seite</option>
     </select>
   </div>
+  <div class="t-group" id="pairs-opts" style="display:none">
+    <span class="t-label">Gruppen:</span>
+    <select id="pairs-count" class="t-sel">
+      <option value="3">3</option><option value="4">4</option><option value="5">5</option>
+      <option value="6" selected>6</option><option value="7">7</option><option value="8">8</option>
+    </select>
+    <span class="t-label">Karten je Gruppe:</span>
+    <select id="pairs-size" class="t-sel">
+      <option value="2" selected>2 (Paare)</option><option value="3">3</option><option value="4">4</option>
+    </select>
+  </div>
 </div>
 <div id="prog-wrap"><div id="prog-bar"></div></div>
 <div id="wrap">
@@ -550,7 +561,7 @@ var exScore=document.getElementById('ex-score');
 var exSelDrop=document.getElementById('exercise-select');
 var oppBar=document.getElementById('opp-bar');
 
-var CARD_COLORS=['#5b8def','#e8913a','#50b87a','#e25d6a','#9b6dd7','#e0a032'];
+var CARD_COLORS=['#5b8def','#e8913a','#50b87a','#e25d6a','#9b6dd7','#e0a032','#2bb3b1','#c0698f'];
 
 function transformNet(coords,rot90,mirX){
   var pts=[];for(var i=0;i<coords.length;i++)pts.push([coords[i][0],coords[i][1]]);
@@ -581,57 +592,86 @@ function shapeKey(coords){return coords.map(function(c){return c[0]+','+c[1];}).
 function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
 
 /* ── Exercise 1: Paare finden ── */
-var exSelected=null,matchesFound=0,attempts=0;
+var exSelected=[],matchesFound=0,attempts=0,pairGroups=6,pairSize=2,pairBusy=false;
+var pairsCountSel=document.getElementById('pairs-count');
+var pairsSizeSel=document.getElementById('pairs-size');
+var pairsOpts=document.getElementById('pairs-opts');
+pairsCountSel.addEventListener('change',function(){if(currentExercise==='pairs')startPairsExercise();});
+pairsSizeSel.addEventListener('change',function(){if(currentExercise==='pairs')startPairsExercise();});
+
+function pairWord(){return pairSize===2?'Paare':(pairSize+'er-Gruppen');}
+function updatePairScore(){exScore.textContent=matchesFound+'/'+pairGroups+' '+pairWord()+' · '+attempts+' Versuche';}
+
+function layoutPairGrid(n){
+  var W=exOverlay.clientWidth||window.innerWidth, H=exOverlay.clientHeight||window.innerHeight;
+  var gap=n>16?8:12, best=null;
+  for(var cols=3;cols<=10;cols++){
+    var rows=Math.ceil(n/cols);
+    var size=Math.min((W-40-gap*(cols-1))/cols,(H-140-gap*(rows-1))/rows,170);
+    if(!best||size>best.size+0.5) best={cols:cols,size:size};
+  }
+  var sz=Math.max(60,Math.floor(best.size));
+  exGrid.style.gridTemplateColumns='repeat('+best.cols+','+sz+'px)';
+  exGrid.style.gap=gap+'px';
+  exGrid.style.maxWidth='none'; exGrid.style.width='auto';
+}
 
 function startPairsExercise(){
-  exGrid.innerHTML='';exSelected=null;matchesFound=0;attempts=0;
-  exStatus.textContent='Finde die 6 Paare! Klicke zwei Netze an, die zusammengehören.';
+  pairGroups=parseInt(pairsCountSel.value,10); pairSize=parseInt(pairsSizeSel.value,10);
+  exGrid.innerHTML='';exSelected=[];matchesFound=0;attempts=0;pairBusy=false;
+  exStatus.textContent=pairSize===2
+    ? 'Finde die '+pairGroups+' Paare! Klicke zwei Netze an, die zusammengehören.'
+    : 'Finde die '+pairGroups+' Gruppen! Klicke jeweils '+pairSize+' Netze an, die zusammengehören.';
   exStatus.style.color='#4a5a6a';exScore.textContent='';
-  var indices=shuffle([0,1,2,3,4,5,6,7,8,9,10]).slice(0,6);
+  var indices=shuffle([0,1,2,3,4,5,6,7,8,9,10]).slice(0,pairGroups);
   var cards=[];
   for(var pi2=0;pi2<indices.length;pi2++){
-    var ni2=indices[pi2],orig=RAW_NETS[ni2];
-    var origRot=Math.floor(Math.random()*4);
-    var origCoords=transformNet(orig,origRot,false);
-    // Partner: immer gedreht oder gespiegelt, nie deckungsgleich mit dem Original
-    var origKey=shapeKey(origCoords),options=[];
+    var orig=RAW_NETS[indices[pi2]];
+    // Alle verschiedenen Lagen (gedreht/gespiegelt) dieses Netzes – keine zwei Karten sind deckungsgleich
+    var seen={},variants=[];
     for(var tr=0;tr<4;tr++)for(var tm=0;tm<2;tm++){
-      var cand=transformNet(orig,tr,tm===1);
-      if(shapeKey(cand)!==origKey) options.push(cand);
+      var cand=transformNet(orig,tr,tm===1),k=shapeKey(cand);
+      if(!seen[k]){seen[k]=1;variants.push(cand);}
     }
-    var partnerCoords=options[Math.floor(Math.random()*options.length)];
-    var col=CARD_COLORS[pi2];
-    cards.push({pairId:pi2,coords:origCoords,color:col});
-    cards.push({pairId:pi2,coords:partnerCoords,color:col});
+    shuffle(variants);
+    for(var v=0;v<pairSize;v++) cards.push({pairId:pi2,coords:variants[v],color:CARD_COLORS[pi2%CARD_COLORS.length]});
   }
   shuffle(cards);
+  layoutPairGrid(cards.length);
   for(var ci2=0;ci2<cards.length;ci2++){
-    (function(card,idx){
+    (function(card){
       var div=document.createElement('div');div.className='ex-card';
       var c=document.createElement('canvas');c.width=160;c.height=160;div.appendChild(c);
       drawNetOnCanvas(c,card.coords,'#6b8aad');
       div.addEventListener('click',function(){onPairClick(div,card,c);});
       exGrid.appendChild(div);
-    })(cards[ci2],ci2);
+    })(cards[ci2]);
   }
 }
 
 function onPairClick(div,card,canvas){
-  if(div.classList.contains('matched')||div.classList.contains('selected'))return;
-  if(!exSelected){exSelected={div:div,card:card,canvas:canvas};div.classList.add('selected');drawNetOnCanvas(canvas,card.coords,card.color);}
-  else{
-    attempts++;var first=exSelected;div.classList.add('selected');drawNetOnCanvas(canvas,card.coords,card.color);
-    if(first.card.pairId===card.pairId){matchesFound++;
-      setTimeout(function(){first.div.classList.remove('selected');first.div.classList.add('matched');div.classList.remove('selected');div.classList.add('matched');
-        exScore.textContent=matchesFound+'/6 Paare · '+attempts+' Versuche';
-        if(matchesFound===6){exStatus.textContent='🎉 Alle Paare gefunden! '+attempts+' Versuche.';exStatus.style.color='#16a34a';}
-      },400);
-    }else{first.div.classList.add('wrong');div.classList.add('wrong');
-      setTimeout(function(){first.div.classList.remove('selected','wrong');div.classList.remove('selected','wrong');
-        drawNetOnCanvas(first.canvas,first.card.coords,'#6b8aad');drawNetOnCanvas(canvas,card.coords,'#6b8aad');
-      },700);exScore.textContent=matchesFound+'/6 Paare · '+attempts+' Versuche';
-    }
-    exSelected=null;
+  if(pairBusy||div.classList.contains('matched')||div.classList.contains('selected'))return;
+  div.classList.add('selected');drawNetOnCanvas(canvas,card.coords,card.color);
+  exSelected.push({div:div,card:card,canvas:canvas});
+  var sel=exSelected;
+  if(sel[0].card.pairId!==card.pairId){
+    // passt nicht zur Gruppe → Fehlversuch
+    attempts++;pairBusy=true;
+    sel.forEach(function(s){s.div.classList.add('wrong');});
+    setTimeout(function(){
+      sel.forEach(function(s){s.div.classList.remove('selected','wrong');drawNetOnCanvas(s.canvas,s.card.coords,'#6b8aad');});
+      pairBusy=false;
+    },700);
+    exSelected=[];updatePairScore();return;
+  }
+  if(sel.length===pairSize){
+    attempts++;matchesFound++;pairBusy=true;
+    setTimeout(function(){
+      sel.forEach(function(s){s.div.classList.remove('selected');s.div.classList.add('matched');});
+      pairBusy=false;updatePairScore();
+      if(matchesFound===pairGroups){exStatus.textContent='🎉 Alle '+pairWord()+' gefunden! '+attempts+' Versuche.';exStatus.style.color='#16a34a';}
+    },400);
+    exSelected=[];updatePairScore();
   }
 }
 
@@ -783,6 +823,8 @@ exSelDrop.addEventListener('change',function(){
   exOverlay.classList.remove('visible');
   oppBar.classList.remove('visible');
   oppMode=false;
+  pairsOpts.style.display=currentExercise==='pairs'?'':'none';
+  exGrid.removeAttribute('style');
   if(currentExercise==='pairs'){exOverlay.classList.add('visible');startPairsExercise();}
   else if(currentExercise==='real'){exOverlay.classList.add('visible');startRealExercise();}
   else if(currentExercise==='opposite'){startOppositeExercise();}
