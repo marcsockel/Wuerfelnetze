@@ -270,9 +270,9 @@ var PI = Math.PI;
 function makeFace(color) {
   var border = new THREE.Mesh(
     new THREE.PlaneGeometry(1,1),
-    new THREE.MeshBasicMaterial({color:0xd4e2ee,side:THREE.FrontSide})
+    new THREE.MeshBasicMaterial({color:0xd4e2ee,side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:2,polygonOffsetUnits:2})
   );
-  border.position.z = -.003;
+  border.position.z = 0;
   var face = new THREE.Mesh(
     new THREE.PlaneGeometry(.96,.96),
     new THREE.MeshLambertMaterial({color:color,side:THREE.DoubleSide})
@@ -342,8 +342,9 @@ function buildNet(coords, colors) {
       var pI=info[pi];
       var dx=gx-px,dy=gy-py;
       var fa,fg;
-      if(dx===1){fa='y';fg=PI/2;}else if(dx===-1){fa='y';fg=-PI/2;}
-      else if(dy===1){fa='x';fg=-PI/2;}else{fa='x';fg=PI/2;}
+      // Falten nach vorne (zum Betrachter hin)
+      if(dx===1){fa='y';fg=-PI/2;}else if(dx===-1){fa='y';fg=PI/2;}
+      else if(dy===1){fa='x';fg=PI/2;}else{fa='x';fg=-PI/2;}
       var pAX=px+dx*.5,pAY=py+dy*.5;
       var piv=new THREE.Group();
       piv.position.set(pAX-pI.absX,pAY-pI.absY,0);
@@ -371,7 +372,7 @@ function applyProgress(t){
   }
   group.position.x=-netCX*(1-e);
   group.position.y=-netCY*(1-e);
-  group.position.z=.5*e;
+  group.position.z=-.5*e;
   document.getElementById('prog-bar').style.width=(t*100).toFixed(1)+'%';
 
   // Opposite exercise: fade faces during fold
