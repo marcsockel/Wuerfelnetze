@@ -172,27 +172,36 @@ canvas { display:block; width:100%; height:100%; position:absolute; top:0; left:
 #opp-status { font-size:14px; font-weight:600; color:#4a5a6a; }
 #opp-score { font-size:13px; font-weight:600; color:#1e6bb8; }
 
-/* ── Blaue Werkzeugleiste ── */
+</style>
+<!-- THEME-BLUE:START -->
+<style>
+/* Einheitliches Farbschema: blaue Werkzeugleiste, weißer Hintergrund */
+#toolbar { background:#1e6bb8 !important; border-bottom-color:#15589a !important; }
 #toolbar .t-label { color:rgba(255,255,255,.85); }
 #toolbar .t-sep { background:rgba(255,255,255,.3); }
-#toolbar .vbtn { background:rgba(255,255,255,.14); color:#fff; border-color:rgba(255,255,255,.35); }
-#toolbar .vbtn:hover { background:rgba(255,255,255,.26); color:#fff; }
-#toolbar .vbtn.active { background:#fff; color:#1e6bb8; border-color:#fff; font-weight:700; }
-#toolbar select.t-sel { background:#fff; color:#1e3a5f; border-color:#fff; }
+#toolbar .vbtn, #toolbar #splitBtn { background:rgba(255,255,255,.14); color:#fff; border-color:rgba(255,255,255,.35); }
+#toolbar .vbtn:hover, #toolbar #splitBtn:hover { background:rgba(255,255,255,.26); color:#fff; }
+#toolbar .vbtn.active, #toolbar #splitBtn.active { background:#fff; color:#1e6bb8; border-color:#fff; font-weight:700; }
+#toolbar select { background:#fff; color:#1e3a5f; border-color:#fff; }
 #toolbar #state-chip { background:rgba(255,255,255,.14); border-color:rgba(255,255,255,.35); color:#fff; }
-#toolbar #state-dot { background:#fff; }
+#toolbar #state-dot { background:rgba(255,255,255,.55); }
+#toolbar #state-dot.ready { background:#fff; }
 #toolbar #state-dot.cube { background:#86efac; }
+#toolbar #state-dot.active { background:#fbbf24; }
 #toolbar #net-dd-btn { background:#fff; border-color:#fff; }
-#toolbar #app-sw-title { color:#fff !important; }
-#toolbar #app-sw-title:hover, #toolbar #app-sw-title.open { background:rgba(255,255,255,.16); }
-#toolbar #app-sw-title::after { color:#1e6bb8; background:#fff; }
-.ex-card { box-shadow:0 1px 4px rgba(0,0,0,.08); }
+#toolbar #num-chip { background:#fff; border-color:#fff; color:#1e6bb8; }
+#toolbar #num-chip.active { background:#0f4c8a; color:#fff; border-color:#fff; }
+#toolbar #counter { color:#fff; }
+#toolbar .swatch.active { border-color:#fff; }
+#toolbar #clearBtn { border-color:#fff; }
+.app-icon { height:30px; width:30px; border-radius:7px; vertical-align:middle; margin-right:6px; }
 </style>
+<!-- THEME-BLUE:END -->
 </head>
 <body>
 <div id="toolbar">
   <div class="t-group">
-    <span style="font-size:15px;font-weight:700;color:#1e6bb8;letter-spacing:.2px">🧩 Würfelnetz</span>
+    <span style="font-size:15px;font-weight:700;color:#1e6bb8;letter-spacing:.2px"><img class="app-icon" src="icon.webp" alt="">Würfelnetz</span>
   </div>
   <div class="t-sep"></div>
   <div class="t-group">
@@ -855,14 +864,14 @@ exSelDrop.addEventListener('change',function(){
 <!-- APP-SWITCHER:START -->
 <style>
 #app-sw-title{cursor:pointer;user-select:none;-webkit-user-select:none;border-radius:8px;padding:4px 8px;margin:-4px -8px;transition:background .15s}
-#app-sw-title:hover,#app-sw-title.open{background:rgba(30,107,184,.10)}
-#app-sw-title::after{content:"▼";display:inline-block;margin-left:8px;padding:3px 7px;font-size:15px;line-height:1;vertical-align:middle;color:#1e6bb8;background:rgba(30,107,184,.14);border-radius:7px}
+#app-sw-title{color:#fff!important}#app-sw-title:hover,#app-sw-title.open{background:rgba(255,255,255,.16)}
+#app-sw-title::after{content:"▼";display:inline-block;margin-left:8px;padding:3px 7px;font-size:15px;line-height:1;vertical-align:middle;color:#1e6bb8;background:#fff;border-radius:7px}
 #app-sw-backdrop{position:fixed;inset:0;z-index:9998;display:none}
 #app-sw-menu{position:fixed;z-index:9999;display:none;background:#fff;border-radius:14px;box-shadow:0 10px 32px rgba(20,40,80,.25);padding:8px;min-width:250px;font-family:'Segoe UI',system-ui,sans-serif}
 #app-sw-menu a{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:10px;font-size:18px;font-weight:600;color:#1e3a5f;text-decoration:none}
 #app-sw-menu a:hover{background:#eef4fb}
 #app-sw-menu a.current{background:#1e6bb8;color:#fff;pointer-events:none}
-#app-sw-menu .ico{font-size:24px;width:30px;text-align:center}
+#app-sw-menu .ico{width:38px;height:38px;border-radius:8px;flex-shrink:0}
 </style>
 <div id="app-sw-backdrop"></div>
 <div id="app-sw-menu" role="menu"></div>
@@ -884,7 +893,7 @@ exSelDrop.addEventListener('change',function(){
   APPS.forEach(function(a){
     var el=document.createElement('a');
     el.href='../'+a.id+'/index.html';
-    el.innerHTML='<span class="ico">'+a.ico+'</span>'+a.name;
+    el.innerHTML='<img class="ico" src="../'+a.id+'/icon.webp" alt="">'+a.name;
     if(path.indexOf('/'+a.id+'/')>=0 || path.slice(-a.id.length-1)==='/'+a.id) el.className='current';
     menu.appendChild(el);
   });
