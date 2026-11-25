@@ -605,10 +605,14 @@ function updatePairScore(){exScore.textContent=matchesFound+'/'+pairGroups+' '+p
 function layoutPairGrid(n){
   var W=exOverlay.clientWidth||window.innerWidth, H=exOverlay.clientHeight||window.innerHeight;
   var gap=n>16?8:12, best=null;
-  for(var cols=3;cols<=10;cols++){
-    var rows=Math.ceil(n/cols);
+  // Nur Spaltenzahlen, die n genau teilen → die Karten bilden immer ein volles Rechteck
+  for(var cols=2;cols<=n;cols++){
+    if(n%cols!==0) continue;
+    var rows=n/cols;
     var size=Math.min((W-40-gap*(cols-1))/cols,(H-140-gap*(rows-1))/rows,170);
-    if(!best||size>best.size+0.5) best={cols:cols,size:size};
+    // bei gleicher Kartengröße: Rechteck, dessen Form am besten zum Bildschirm passt
+    var fit=Math.abs(Math.log((cols/rows)/(W/H)));
+    if(!best||size>best.size+0.5||(Math.abs(size-best.size)<=0.5&&fit<best.fit)) best={cols:cols,size:size,fit:fit};
   }
   var sz=Math.max(60,Math.floor(best.size));
   exGrid.style.gridTemplateColumns='repeat('+best.cols+','+sz+'px)';
