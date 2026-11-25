@@ -575,6 +575,9 @@ function drawNetOnCanvas(canvas,coords,color){
   }
 }
 
+// Form-Schlüssel unabhängig von der Reihenfolge der Felder
+function shapeKey(coords){return coords.map(function(c){return c[0]+','+c[1];}).sort().join(';');}
+
 function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
 
 /* ── Exercise 1: Paare finden ── */
@@ -590,9 +593,13 @@ function startPairsExercise(){
     var ni2=indices[pi2],orig=RAW_NETS[ni2];
     var origRot=Math.floor(Math.random()*4);
     var origCoords=transformNet(orig,origRot,false);
-    var partnerCoords,tries=0;
-    do{var pRot=Math.floor(Math.random()*4);var pMir=Math.random()>.4;partnerCoords=transformNet(orig,pRot,pMir);tries++;}
-    while(tries<20&&JSON.stringify(origCoords)===JSON.stringify(partnerCoords));
+    // Partner: immer gedreht oder gespiegelt, nie deckungsgleich mit dem Original
+    var origKey=shapeKey(origCoords),options=[];
+    for(var tr=0;tr<4;tr++)for(var tm=0;tm<2;tm++){
+      var cand=transformNet(orig,tr,tm===1);
+      if(shapeKey(cand)!==origKey) options.push(cand);
+    }
+    var partnerCoords=options[Math.floor(Math.random()*options.length)];
     var col=CARD_COLORS[pi2];
     cards.push({pairId:pi2,coords:origCoords,color:col});
     cards.push({pairId:pi2,coords:partnerCoords,color:col});
