@@ -303,7 +303,7 @@ var RAW_NETS = [
 
 /* ═══ BUILD NET ═══ */
 var pivotList = [];
-var netCX = 0, netCY = 0;
+var netCX = 0, netCY = 0, baseX = 0, baseY = 0;
 var faceMeshes = [];
 
 function chooseBaseFace(coords) {
@@ -334,6 +334,7 @@ function buildNet(coords, colors) {
   // mit möglichst wenigen Faltschritten erreicht werden (meist die mittlere).
   var root = chooseBaseFace(coords);
   par[root] = -1;
+  baseX = coords[root][0]; baseY = coords[root][1];
   var queue = [root], qi = 0;
   while (qi < queue.length) {
     var ci = queue[qi++];
@@ -392,8 +393,9 @@ function applyProgress(t){
     if(p.foldAxis==='y') p.pivot.rotation.y=e*p.foldAngle;
     else p.pivot.rotation.x=e*p.foldAngle;
   }
-  group.position.x=-netCX*(1-e);
-  group.position.y=-netCY*(1-e);
+  // Netz-Mitte wandert zur Würfel-Mitte, beide im Drehpunkt (0,0,0)
+  group.position.x=-(netCX*(1-e)+baseX*e);
+  group.position.y=-(netCY*(1-e)+baseY*e);
   group.position.z=-.5*e;
   document.getElementById('prog-bar').style.width=(t*100).toFixed(1)+'%';
 
